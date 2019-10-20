@@ -23,13 +23,15 @@ object OIO {
 object Protoc {
 
   def descriptor(
-    input: Path
+    input: Path,
+    protoPath: Path
   ): IO[Int] =
     OIO.tempFile("proto", "desc").use { desc =>
       IO(
         UnsafeProtoc.runProtoc(Array(
           "--include_source_info",
           s"--descriptor_set_out=${desc.toAbsolutePath}",
+          s"--proto_path=${protoPath.toAbsolutePath}",
           input.toAbsolutePath.toString
         )))
     }
@@ -40,7 +42,10 @@ object Main extends IOApp {
   def run(args: List[String]): IO[ExitCode] =
     for {
       _ <- IO(println("HELLO!"))
-      res <- Protoc.descriptor(Paths.get("Dummy.proto"))
+      res <- Protoc.descriptor(
+        Paths.get("Dummy.proto"),
+        Paths.get(".")
+      )
     } yield ExitCode.Success
 
 }
