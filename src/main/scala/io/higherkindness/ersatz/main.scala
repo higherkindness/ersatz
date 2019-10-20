@@ -52,7 +52,7 @@ object Protoc {
   def descriptor(
     input: Path,
     protoPath: Path
-  ): IO[Int] =
+  ): IO[FileDescriptorSet] =
     OIO.tempFile("proto", "desc").use { desc =>
       val runProtoc = IO(UnsafeProtoc.runProtoc(Array(
           "--include_source_info",
@@ -65,6 +65,6 @@ object Protoc {
         IO(FileDescriptorSet.parseFrom(CodedInputStream.newInstance(bb)))
       }
 
-      runProtoc <* parseDescriptor
+      runProtoc *> parseDescriptor
     }
 }
