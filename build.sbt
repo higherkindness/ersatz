@@ -8,7 +8,7 @@ lazy val V = new {
   val avro            = "1.9.1"
   val circe           = "0.12.2"
   val circeDerivation = "0.12.0-M7"
-  val protoc          = "2.4.1"
+  val protoc          = "3.8.0"
   val scalacheck      = "1.14.0"
 }
 
@@ -22,6 +22,6 @@ libraryDependencies ++= Seq(
   "org.apache.avro"         % "avro" % V.avro,
   "io.circe"               %% "circe-core" % V.circe,
   "io.circe"               %% "circe-derivation" % V.circeDerivation,
-  "com.github.os72"         % "protoc" % V.protoc,
+  "com.github.os72"         % "protoc-jar" % V.protoc,
   "io.higherkindness"      %% "droste-core" % V.droste,
 )
