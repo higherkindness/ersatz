@@ -1,25 +1,21 @@
 package io.higherkindness.ersatz
 
-import cats.effect.IO
-import cats.effect.IOApp
-import cats.effect.ExitCode
-import cats.effect.Resource
-import cats.syntax.all._
-
-import com.github.os72.protocjar.{ Protoc => UnsafeProtoc }
-import com.google.protobuf.CodedInputStream
-import com.google.protobuf.DescriptorProtos.FileDescriptorSet
-
 import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
 import java.nio.channels.FileChannel
+import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+
+import cats.effect.{ExitCode, IO, IOApp, Resource}
+import cats.syntax.all._
+import com.github.os72.protocjar.{Protoc => UnsafeProtoc}
+import com.google.protobuf.CodedInputStream
+import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, FileDescriptorSet}
+import io.higherkindness.ersatz.proto.ProtoParser
+
+import scala.collection.JavaConverters._
 
 object Main extends IOApp {
 
-  def run(args: List[String]): IO[ExitCode] =
+  def run(args: List[String]): IO[ExitCode] = {
     for {
       _ <- IO(println("HELLO!"))
       res <- Protoc.descriptor(
@@ -27,9 +23,15 @@ object Main extends IOApp {
         Paths.get(".")
       )
       _ <- IO(println("did we get a valid descriptor?"))
-      _ <- IO(println(res))
+      fileDescriptor <- ProtoParser.findDescriptorProto("Dummy.proto", res.getFileList.asScala.toList)
+        .fold(IO.raiseError[FileDescriptorProto](new Exception("descriptor not found")))(IO.delay(_))
+      // _ <-  OptionT.liftF(IO(println(fileDescriptor)))
+      protoProtocol <- IO(ProtoParser.fromDescriptor(fileDescriptor))
+      _ <- IO(println(protoProtocol))
+      schemaProto <- IO(protocol.fromProtobufProtocol(protoProtocol))
+      _ <- IO(println(schemaProto))
     } yield ExitCode.Success
-
+  }
 }
 
 object OIO {

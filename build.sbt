@@ -24,4 +24,6 @@ libraryDependencies ++= Seq(
   "io.circe"               %% "circe-derivation" % V.circeDerivation,
   "com.github.os72"         % "protoc-jar" % V.protoc,
   "io.higherkindness"      %% "droste-core" % V.droste,
+  "io.higherkindness"   %% "droste-macros" % V.droste,
 )
+
