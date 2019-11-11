@@ -25,29 +25,19 @@ sealed trait ProtobufF[A]
 object ProtobufF {
 
   final case class TNull[A]() extends ProtobufF[A]
-
   final case class TUint64[A]() extends ProtobufF[A]
-
   final case class TBool[A]() extends ProtobufF[A]
-
   final case class TString[A]() extends ProtobufF[A]
-
   final case class TNamedType[A](name: String) extends ProtobufF[A]
-
   final case class TRepeated[A](value: A) extends ProtobufF[A]
-
   final case class TMessage[A](name: String, fields: List[FieldF[A]]) extends ProtobufF[A]
 
+  // smart constructors, to avoid scala inferring specific types instead of SchemaF
   def uint64[A](): ProtobufF[A] = TUint64()
-
   def bool[A](): ProtobufF[A] = TBool()
-
   def string[A](): ProtobufF[A] = TString()
-
   def namedType[A](name: String): ProtobufF[A] = TNamedType(name)
-
   def repeated[A](value: A): ProtobufF[A] = TRepeated(value)
-
   def message[A](name: String, fields: List[FieldF[A]]): ProtobufF[A] = TMessage(name, fields)
 
   implicit val traverse: DefaultTraverse[ProtobufF] = new DefaultTraverse[ProtobufF] {

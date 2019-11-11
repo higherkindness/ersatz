@@ -21,14 +21,4 @@ object SchemaF {
   final case class TRequired[A](value: A)                            extends SchemaF[A]
   final case class TProduct[A](name: String, fields: List[Field[A]]) extends SchemaF[A]
 
-  // smart constructors, to avoid scala inferring specific types instead of SchemaF
-  def `null`[A](): SchemaF[A]                                      = TNull()
-  def long[A](): SchemaF[A]                                        = TLong()
-  def boolean[A](): SchemaF[A]                                     = TBoolean()
-  def string[A](): SchemaF[A]                                      = TString()
-  def namedType[A](name: String): SchemaF[A]                       = TNamedType(name)
-  def option[A](value: A): SchemaF[A]                              = TOption(value)
-  def list[A](value: A): SchemaF[A]                                = TList(value)
-  def required[A](value: A): SchemaF[A]                            = TRequired(value)
-  def product[A](name: String, fields: List[Field[A]]): SchemaF[A] = TProduct(name, fields)
 }
