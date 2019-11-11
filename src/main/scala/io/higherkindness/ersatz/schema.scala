@@ -1,15 +1,9 @@
 package io.higherkindness.ersatz
 
-import cats.Eq
-import cats.instances.list._
-import cats.instances.string._
-import cats.syntax.eq._
-import higherkindness.droste.macros.deriveTraverse
-
-@deriveTraverse sealed trait SchemaF[A]
+sealed trait SchemaF[A]
 
 object SchemaF {
-  @deriveTraverse final case class Field[A](name: String, tpe: A)
+  final case class Field[A](name: String, tpe: A)
 
   final case class TNull[A]()                                        extends SchemaF[A]
   final case class TLong[A]()                                        extends SchemaF[A]
