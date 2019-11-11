@@ -1,7 +1,7 @@
 package io.higherkindness.ersatz.proto
 
 import cats.implicits._
-import cats.{Applicative, Eq}
+import cats.Applicative
 import higherkindness.droste.util.DefaultTraverse
 
 sealed trait FieldF[A] {
@@ -10,7 +10,6 @@ sealed trait FieldF[A] {
 }
 
 object FieldF {
-
   final case class Field[A](
                              name: String,
                              tpe: A,
@@ -19,14 +18,6 @@ object FieldF {
     extends FieldF[A]
 
   final case class OneOfField[A](name: String, tpe: A) extends FieldF[A]
-
-  implicit def fieldEq[T: Eq]: Eq[FieldF[T]] = Eq.instance {
-    case (Field(n, t, p, r), Field(n2, t2, p2, r2)) =>
-      n === n2 && t === t2 && p === p2 && r === r2
-    case (OneOfField(n, tpe), OneOfField(n2, tpe2)) =>
-      n === n2 && tpe === tpe2
-    case _ => false
-  }
 }
 
 sealed trait ProtobufF[A]
@@ -46,17 +37,6 @@ object ProtobufF {
   final case class TRepeated[A](value: A) extends ProtobufF[A]
 
   final case class TMessage[A](name: String, fields: List[FieldF[A]]) extends ProtobufF[A]
-
-  implicit def protobufEq[T: Eq]: Eq[ProtobufF[T]] = Eq.instance {
-    case (TNull(), TNull()) => true
-    case (TUint64(), TUint64()) => true
-    case (TBool(), TBool()) => true
-    case (TString(), TString()) => true
-    case (TNamedType(n), TNamedType(n2)) => n === n2
-    case (TRepeated(v), TRepeated(v2)) => v === v2
-    case (TMessage(n, f), TMessage(n2, f2)) => n === n2 && f === f2
-    case _ => false
-  }
 
   def uint64[A](): ProtobufF[A] = TUint64()
 
@@ -83,7 +63,6 @@ object ProtobufF {
         }
 
       fa match {
-       // case TNull() => `null`[B]().pure[G]
         case TUint64() => uint64[B]().pure[G]
         case TBool() => bool[B]().pure[G]
         case TString() => string[B]().pure[G]

@@ -25,7 +25,6 @@ object Main extends IOApp {
       _ <- IO(println("did we get a valid descriptor?"))
       fileDescriptor <- ProtoParser.findDescriptorProto("Dummy.proto", res.getFileList.asScala.toList)
         .fold(IO.raiseError[FileDescriptorProto](new Exception("descriptor not found")))(IO.delay(_))
-      // _ <-  OptionT.liftF(IO(println(fileDescriptor)))
       protoProtocol <- IO(ProtoParser.fromDescriptor(fileDescriptor))
       _ <- IO(println(protoProtocol))
       schemaProto <- IO(protocol.fromProtobufProtocol(protoProtocol))
