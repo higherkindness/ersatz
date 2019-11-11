@@ -17,13 +17,14 @@ object Main extends IOApp {
 
   def run(args: List[String]): IO[ExitCode] = {
     for {
-      _ <- IO(println("HELLO!"))
-      res <- Protoc.descriptor(
+      _ <- IO(println(" ~ ersatz ~ "))
+
+      fileDescriptorSet <- Protoc.descriptor(
         Paths.get("Dummy.proto"),
         Paths.get(".")
       )
       _ <- IO(println("did we get a valid descriptor?"))
-      fileDescriptor <- ProtoParser.findDescriptorProto("Dummy.proto", res.getFileList.asScala.toList)
+      fileDescriptor <- ProtoParser.findDescriptorProto("Dummy.proto", fileDescriptorSet.getFileList.asScala.toList)
         .fold(IO.raiseError[FileDescriptorProto](new Exception("descriptor not found")))(IO.delay(_))
       protoProtocol <- IO(ProtoParser.fromDescriptor(fileDescriptor))
       _ <- IO(println(protoProtocol))
