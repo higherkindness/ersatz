@@ -3,52 +3,42 @@ package io.higherkindness.ersatz
 import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.ExitCode
-import cats.effect.Resource
 import cats.Applicative
 import cats.Traverse
 import cats.Functor
 import cats.Monad
-import cats.data.Kleisli
 import cats.instances.list._
 import cats.instances.either._
 import cats.syntax.all._
 
-import com.github.os72.protocjar.{ Protoc => UnsafeProtoc }
-import com.google.protobuf.CodedInputStream
-import com.google.protobuf.DescriptorProtos.FileDescriptorSet
 import com.google.protobuf.DescriptorProtos.DescriptorProto
 import com.google.protobuf.DescriptorProtos.FieldDescriptorProto
 import com.google.protobuf.GeneratedMessageV3
 
-import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
-import java.nio.channels.FileChannel
 
 import scala.collection.JavaConverters._
 
 import higherkindness.droste.util.DefaultTraverse
-import higherkindness.droste.data.Fix
+import higherkindness.droste.data.Attr
+import higherkindness.droste.data.AttrF
 
 object Main extends IOApp {
 
   def run(args: List[String]): IO[ExitCode] =
     for {
-      _ <- IO(println("HELLO!"))
+      _ <- OIO.println(" ~ ersatz ~ ")
+
       fileDescriptorSet <- Protoc.descriptor(
         Paths.get("Dummy.proto"),
         Paths.get(".")
       )
-      _ <- IO(println("did we get a valid descriptor?"))
-      _ <- IO(println(fileDescriptorSet))
 
       res = fileDescriptorSet.getFileList.asScala.toList.map(
         fileDescriptor => fileDescriptor.getMessageTypeList.asScala.toList.map(message =>
           d2s(message)))
 
-      _ <- IO(println(res))
+      _ <- res.traverse_(_.traverse_(OIO.println))
     } yield ExitCode.Success
 
   type Fix[F[_]]
@@ -102,6 +92,7 @@ sealed trait ADTParser {
 }
 
 object Proto2Schema {
+  // field.getNumber, field.asRight
 
     val coalgebra: GeneratedMessageV3 => Either[String, SchemaF[GeneratedMessageV3]] =
       _ match {
@@ -110,11 +101,12 @@ object Proto2Schema {
 
         case v: FieldDescriptorProto =>
           import FieldDescriptorProto.Type._
-          (v.getType match {
-            case TYPE_STRING => Right(PrimitiveType.String)
-            case TYPE_BOOL => Right(PrimitiveType.Boolean)
+          v.getType match {
+            case TYPE_STRING => Right(PrimitiveSchemaF(v.getName, PrimitiveType.String))
+            case TYPE_BOOL => Right(PrimitiveSchemaF(v.getName, PrimitiveType.Boolean))
+            case TYPE_MESSAGE => Right(NestedSchemaF(v.getName, v.getTypeName))
             case todo => Left(s"Unhandled primitive type $todo")
-          }).map(pt => PrimitiveSchemaF(v.getName, pt))
+          }
 
         case other => Left(s"Unable to handle ${other}")
       }
@@ -124,15 +116,21 @@ sealed trait SchemaF[A] {
   def widen: SchemaF[A] = this
 }
 
+sealed trait LeafSchemaF[A] extends SchemaF[A] {
+  def retag[B]: SchemaF[B] = this.asInstanceOf[SchemaF[B]]
+}
+
 object SchemaF {
   implicit val traverseSchemaaF: Traverse[SchemaF] = new DefaultTraverse[SchemaF] {
     override def traverse[G[_]: Applicative, A, B](fa: SchemaF[A])(f: A => G[B]): G[SchemaF[B]] =
       fa match {
         case RootSchemaF(name, fields) => fields.traverse(f) map { RootSchemaF(name, _) }
-        case v: PrimitiveSchemaF[_] => v.retag.pure[G]
+        case v: LeafSchemaF[_] => v.retag.pure[G]
       }
   }
 }
+
+final case class NestedSchemaF[A](name: String, ref: String) extends LeafSchemaF[A]
 
 final case class RootSchemaF[A](name: String, fields: List[A]) extends SchemaF[A]
 object RootSchemaF {
@@ -140,9 +138,8 @@ object RootSchemaF {
     new RootSchemaF(name, fields)
 }
 
-final case class PrimitiveSchemaF[A](name: String, primitiveType: PrimitiveType) extends SchemaF[A] {
-  def retag[B]: SchemaF[B] = this.asInstanceOf[SchemaF[B]]
-}
+final case class PrimitiveSchemaF[A](name: String, primitiveType: PrimitiveType) extends LeafSchemaF[A]
+
 object PrimitiveSchemaF {
   def apply[A](name: String, primitiveType: PrimitiveType): SchemaF[A] =
     new PrimitiveSchemaF(name, primitiveType)
@@ -152,41 +149,4 @@ sealed trait PrimitiveType
 object PrimitiveType {
   final case object String extends PrimitiveType
   final case object Boolean extends PrimitiveType
-}
-
-object OIO {
-  def tempFile(prefix: String, suffix: String): Resource[IO, Path] =
-    Resource.make(IO {
-      val p = Files.createTempFile(prefix, suffix)
-      p.toFile.deleteOnExit()
-      p
-    })(p => IO(Files.delete(p)))
-
-
-  def loadFile(path: Path): Resource[IO, ByteBuffer] =
-    Resource
-      .fromAutoCloseable(IO(FileChannel.open(path, StandardOpenOption.READ)))
-      .map(channel => channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size))
-}
-
-object Protoc {
-
-  def descriptor(
-    input: Path,
-    protoPath: Path
-  ): IO[FileDescriptorSet] =
-    OIO.tempFile("proto", "desc").use { desc =>
-      val runProtoc = IO(UnsafeProtoc.runProtoc(Array(
-          //"--include_source_info",
-          s"--descriptor_set_out=${desc.toAbsolutePath}",
-          s"--proto_path=${protoPath.toAbsolutePath}",
-          input.toAbsolutePath.toString
-      )))
-
-      val parseDescriptor = OIO.loadFile(desc).use { bb =>
-        IO(FileDescriptorSet.parseFrom(CodedInputStream.newInstance(bb)))
-      }
-
-      runProtoc *> parseDescriptor
-    }
 }

@@ -10,11 +10,11 @@ sealed trait FieldF[A] {
 
 object FieldF {
   final case class Field[A](
-                             name: String,
-                             tpe: A,
-                             position: Int,
-                             isRepeated: Boolean,
-                             isMapField: Boolean)
+    name: String,
+    tpe: A,
+    position: Int,
+    isRepeated: Boolean,
+    isMapField: Boolean)
     extends FieldF[A]
 
   final case class OneOfField[A](name: String, tpe: A) extends FieldF[A]
