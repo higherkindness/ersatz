@@ -24,7 +24,6 @@ object ProtoParser {
 
   def fromFieldDescriptorProto[A](
                                    field: FieldDescriptorProto,
-                                  // source: DescriptorProto,
                                    namedMessages: List[NamedMessage]
                                  )(implicit A: Embed[ProtobufF, A]): FieldF[A] = {
     FieldF.Field(
@@ -67,5 +66,4 @@ object ProtoParser {
   implicit class LabelOps(self: Label) {
     def isRepeated: Boolean = self.name() == "LABEL_REPEATED"
   }
-
 }

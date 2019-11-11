@@ -20,5 +20,4 @@ object SchemaF {
   final case class TList[A](value: A)                                extends SchemaF[A]
   final case class TRequired[A](value: A)                            extends SchemaF[A]
   final case class TProduct[A](name: String, fields: List[Field[A]]) extends SchemaF[A]
-
 }
