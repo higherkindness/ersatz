@@ -17,56 +17,19 @@ object Main extends IOApp {
 
   def run(args: List[String]): IO[ExitCode] = {
     for {
-      _ <- IO(println(" ~ ersatz ~ "))
+      _ <- OIO.println(" ~ ersatz ~ ")
 
       fileDescriptorSet <- Protoc.descriptor(
         Paths.get("Dummy.proto"),
         Paths.get(".")
       )
-      _ <- IO(println("did we get a valid descriptor?"))
+      _ <- OIO.println("did we get a valid descriptor?")
       fileDescriptor <- ProtoParser.findDescriptorProto("Dummy.proto", fileDescriptorSet.getFileList.asScala.toList)
         .fold(IO.raiseError[FileDescriptorProto](new Exception("descriptor not found")))(IO.delay(_))
       protoProtocol <- IO(ProtoParser.fromDescriptor(fileDescriptor))
-      _ <- IO(println(protoProtocol))
+      _ <- OIO.println(protoProtocol)
       schemaProto <- IO(protocol.fromProtobufProtocol(protoProtocol))
-      _ <- IO(println(schemaProto))
+      _ <- OIO.println(schemaProto)
     } yield ExitCode.Success
   }
-}
-
-object OIO {
-  def tempFile(prefix: String, suffix: String): Resource[IO, Path] =
-    Resource.make(IO {
-      val p = Files.createTempFile(prefix, suffix)
-      p.toFile.deleteOnExit()
-      p
-    })(p => IO(Files.delete(p)))
-
-
-  def loadFile(path: Path): Resource[IO, ByteBuffer] =
-    Resource
-      .fromAutoCloseable(IO(FileChannel.open(path, StandardOpenOption.READ)))
-      .map(channel => channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size))
-}
-
-object Protoc {
-
-  def descriptor(
-    input: Path,
-    protoPath: Path
-  ): IO[FileDescriptorSet] =
-    OIO.tempFile("proto", "desc").use { desc =>
-      val runProtoc = IO(UnsafeProtoc.runProtoc(Array(
-          "--include_source_info",
-          s"--descriptor_set_out=${desc.toAbsolutePath}",
-          s"--proto_path=${protoPath.toAbsolutePath}",
-          input.toAbsolutePath.toString
-      )))
-
-      val parseDescriptor = OIO.loadFile(desc).use { bb =>
-        IO(FileDescriptorSet.parseFrom(CodedInputStream.newInstance(bb)))
-      }
-
-      runProtoc *> parseDescriptor
-    }
 }
